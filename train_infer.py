@@ -326,7 +326,6 @@ def train_infer(args, train=True, infer_weight_path=None):
         model.load_state_dict(checkpoint)
         _, _ = process_val_test(args, model, test_loader, f_name, epoch, best_psnr, best_ssim, mode="test")
     else:
-        weight_name = f"{f_name}_latest.pth"
         checkpoint = torch.load(infer_weight_path)
         model.load_state_dict(checkpoint)
         _, _ = process_val_test(args, model, test_loader, f_name, epoch, best_psnr, best_ssim, mode="test")    
