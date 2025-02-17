@@ -12,10 +12,10 @@ Code Implementation of CRUNet-MR method.
 ## 🔨 Usage
 
 For the inference of testing data: 
-    1. set path for the variable **infer_weight_path** and **test_path** of args 
-    2. **axis** and **mode** can be changed to the corresponding axis view and acceleration factor
-    3. create folder for value files and set it to **save_val_path** of args
-    4. then run python command
+- set path for the variable **infer_weight_path** and **test_path** of args 
+- **axis** and **mode** can be changed to the corresponding axis view and acceleration factor
+- create folder for value files and set it to **save_val_path** of args
+- then run python command
 ```
 python train_infer.py
 ```
