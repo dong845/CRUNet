@@ -39,6 +39,20 @@ class CineDataset_MC_Philips(Dataset):
     def __len__(self):
         return len(self.files)
     
+    def ifft2c(self, kspace):
+        axes = (-2, -1)
+        return fftshift(fft2(ifftshift(kspace, axes=axes), axes=axes, norm='ortho'), axes=axes)
+
+    def fft2c(self, img):
+        axes = (-2, -1)
+        return fftshift(ifft2(ifftshift(img, axes=axes), axes=axes, norm='ortho'), axes=axes)
+    
+    def norm(self, kspace):
+        img = self.ifft2c(kspace[:,0])
+        img = img/np.max(np.abs(img))
+        kspace = self.fft2c(img)
+        return kspace
+         
     def __getitem__(self, idx):
         file = self.files[idx]
         file_path = os.path.join(self.folder_path, file)
@@ -48,8 +62,8 @@ class CineDataset_MC_Philips(Dataset):
             mask = np.array(f["mask"]) # t slice cn h w
             sense_map = np.array(f["sense_map"])
             und_kspace = np.array(f[f"UnderSample"])
-        full_kspace = full_kspace[:,0]/np.max(full_kspace[:,0])
-        und_kspace = und_kspace[:,0]/np.max(und_kspace[:,0])
+        full_kspace = self.norm(full_kspace)
+        und_kspace = self.norm(und_kspace)
         mask = mask[:,0]
         sense_map = sense_map[:,0]
         if self.transform is not None:
