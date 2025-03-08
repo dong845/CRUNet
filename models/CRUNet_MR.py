@@ -647,8 +647,8 @@ class CRUNet_D_Mon_NWS(nn.Module):
         return x.permute(0,4,2,3,1).contiguous()
 
 # ins = torch.randn(1,12,10,448,224)+1j*torch.randn(1,12,10,448,224)
-# mask = torch.ones(1,448,224)
-# sense_maps = torch.randn(1,10,448,224,2)
-# model = CRUNet_D_Mon_NWS_Con(num_cascades=3)
+# mask = torch.ones(1,12,10,448,224)
+# sense_maps = torch.randn(1,12,10,448,224,2)
+# model = CRUNet_D_NWS(num_cascades=3)
 # ous = model(ins, mask, sense_maps)        
 # print(ous.shape)

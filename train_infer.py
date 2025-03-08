@@ -5,7 +5,7 @@ import torch
 from torch.utils.data import DataLoader
 import torch.optim as optim
 import models.utils as utils
-from cine_dataset import CineDataset_MC
+from cine_dataset import CineDataset_MC, CineDataset_MC_Philips
 import matplotlib.pyplot as plt
 from metrics import calmetric, calmetric_new
 from warmup_scheduler import GradualWarmupScheduler
@@ -71,7 +71,7 @@ def sens_reduce(x: torch.Tensor, sens_maps: torch.Tensor) -> torch.Tensor:
 def build_loader(args, folder_path):
     folder_path = os.path.join(folder_path, args.axis)
     files = os.listdir(folder_path)
-    dataset = CineDataset_MC(files = files, folder_path=folder_path, mode=args.mode)
+    dataset = CineDataset_MC_Philips(files = files, folder_path=folder_path, mode=args.mode)
     dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True)
     return dataloader
 
@@ -227,37 +227,37 @@ def train_infer(args, train=True, infer_weight_path=None):
     weight_decay = args.weight_decay
     warmup_epoch = args.warmup_episodes
     interval = args.interval
-
     f_name = args.model_name
-    mode="08"
-    if args.mode=="AccFactor04":
-        mode = "04"
-    elif args.mode=="AccFactor10":
-        mode = "10"
-    elif args.mode=="AccFactor16":
-        mode = "16"
-   
-    if args.axis=="lax":
-        wan_name = f"CMR_{mode}_LAX_new"
-    else:
-        wan_name = f"CMR_{mode}_SAX_new"
         
     model = models_name[args.model_name]()
     model = model.cuda()
-
-    criterion = torch.nn.MSELoss().cuda()
-    criterion0 = torch.nn.L1Loss().cuda()
-    criterion1 = SSIMLoss().cuda()
-    optimizer = optim.AdamW(model.parameters(), lr=lr,betas=(0.9,0.999),eps=1e-8, weight_decay=weight_decay)
-    scheduler_cosine = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epoch-warmup_epoch, eta_min=1e-4)  # eta_min from 1e-5 to 1e-6
-    scheduler = GradualWarmupScheduler(optimizer,
-            multiplier=1,total_epoch=warmup_epoch,
-            after_scheduler=scheduler_cosine)
-    pytorch_total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    print('Total trainable params: %d' % pytorch_total_params)
-    g_loss = 1e4
         
     if train:
+        mode="08"
+        if args.mode=="AccFactor04":
+            mode = "04"
+        elif args.mode=="AccFactor10":
+            mode = "10"
+        elif args.mode=="AccFactor16":
+            mode = "16"
+    
+        criterion = torch.nn.MSELoss().cuda()
+        criterion0 = torch.nn.L1Loss().cuda()
+        criterion1 = SSIMLoss().cuda()
+        optimizer = optim.AdamW(model.parameters(), lr=lr,betas=(0.9,0.999),eps=1e-8, weight_decay=weight_decay)
+        scheduler_cosine = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epoch-warmup_epoch, eta_min=1e-4)  # eta_min from 1e-5 to 1e-6
+        scheduler = GradualWarmupScheduler(optimizer,
+                multiplier=1,total_epoch=warmup_epoch,
+                after_scheduler=scheduler_cosine)
+        pytorch_total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+        print('Total trainable params: %d' % pytorch_total_params)
+        g_loss = 1e4
+        
+        if args.axis=="lax":
+            wan_name = f"CMR_{mode}_LAX_new"
+        else:
+            wan_name = f"CMR_{mode}_SAX_new"
+        
         wandb.init(project=wan_name, name=f"{f_name}_{args.axis}_cascade5")  
         wandb.watch(model)
     
@@ -326,6 +326,7 @@ def train_infer(args, train=True, infer_weight_path=None):
         model.load_state_dict(checkpoint)
         _, _ = process_val_test(args, model, test_loader, f_name, epoch, best_psnr, best_ssim, mode="test")
     else:
+        epoch = 0
         checkpoint = torch.load(infer_weight_path)
         model.load_state_dict(checkpoint)
         _, _ = process_val_test(args, model, test_loader, f_name, epoch, best_psnr, best_ssim, mode="test")    
