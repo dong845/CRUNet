@@ -5,7 +5,9 @@ Code Implementation of CRUNet-MR method.
 ## File Description
 
 - models/CRUNet_MR.py: Network structure of CRUNet-MR and an optimized version
-- cine_dataset.py: Build dataset class (Fot the uploaded CMRxRecon2023 data, it is already processed before saving into the h5 files, so it is mainly a loading process inside the class.) To note, the input format should be h5 file for Philips data, with the keys (FullSample, mask, sense_map, UnderSample) inside it, they all have the shape of (frame_num, slice_num, coil_num, height, width) and slice_num=1.
+- cine_dataset.py: Build dataset class 
+   * For the uploaded CMRxRecon2023 data, it is already processed before saving into the h5 files, so it is mainly a loading process inside the class. Use "CineDataset_MC" class. 
+   * For the testing Philips data, the input format should also be h5 file, with the keys (FullSample, mask, sense_map, UnderSample) inside it. They all have the shape of (frame_num, slice_num, coil_num, height, width) and slice_num=1.
 - requirements.txt: Some main python packages to be installed
 - train_infer.py: Including training and testing.
 
