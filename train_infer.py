@@ -5,7 +5,7 @@ import torch
 from torch.utils.data import DataLoader
 import torch.optim as optim
 import models.utils as utils
-from cine_dataset import CineDataset_MC, CineDataset_MC_Philips
+from cine_dataset import CineDataset_MC, CineDataset_MC_Philips_New
 import matplotlib.pyplot as plt
 from metrics import calmetric, calmetric_new
 from warmup_scheduler import GradualWarmupScheduler
@@ -67,11 +67,17 @@ def sens_reduce(x: torch.Tensor, sens_maps: torch.Tensor) -> torch.Tensor:
     return utils.complex_mul(x, utils.complex_conj(sens_maps)).sum(
         dim=2, keepdim=True,
     )
-    
+
 def build_loader(args, folder_path):
     folder_path = os.path.join(folder_path, args.axis)
     files = os.listdir(folder_path)
-    dataset = CineDataset_MC_Philips(files = files, folder_path=folder_path, mode=args.mode)
+    dataset = CineDataset_MC(files = files, folder_path=folder_path, mode=args.mode)
+    dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True)
+    return dataloader
+
+def build_loader_Philips(args, file_path):
+    files = [file_path]
+    dataset = CineDataset_MC_Philips_New(files = files)
     dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True)
     return dataloader
 
@@ -156,6 +162,12 @@ def val_test(model, data_loader, mode="val"):
         return float(test_loss/(i+1)), nmses, psnrs, ssims, distses, haars, names, img_unds, img_recs, img_gnds
 
 def process_val_test(args, model, data_loader, f_name, epoch, best_psnr, best_ssim, mode="val"):
+    if args.save_pic_path=="":
+        os.makedirs("./pic_save", exist_ok=True)
+    if args.save_val_path=="":
+        os.makedirs("./val_save", exist_ok=True)
+    if args.save_weight_path=="":
+        os.makedirs("./weight_save", exist_ok=True)
     if mode=="val":
         test_loss, nmses, psnrs, ssims, names, img_unds, img_recs, img_gnds = val_test(model, data_loader)
         c_psnr = np.mean(psnrs)
@@ -265,7 +277,7 @@ def train_infer(args, train=True, infer_weight_path=None):
         val_loader = build_loader(args, args.val_path)
         test_loader = build_loader(args, args.test_path)
     else:
-        test_loader = build_loader(args, args.test_path)
+        test_loader = build_loader_Philips(args, args.test_path)
     
     if train:
         for epoch in range(0, num_epoch+1):
@@ -336,9 +348,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--model_name', type=str, default="CRUNet_MR", help='model name')
     
-    parser.add_argument('--train_path', type=str, default="", help='save path for training data')
-    parser.add_argument('--val_path', type=str, default="", help='save path for validation data')
-    parser.add_argument('--test_path', type=str, default="", help='save path for testing data')
+    parser.add_argument('--train_path', type=str, default="", help='save path for training data') # needed for training
+    parser.add_argument('--val_path', type=str, default="", help='save path for validation data') # needed for validation
+    parser.add_argument('--test_path', type=str, default="", help='save path for testing data')  # needed for testing: hdf5 file path
     parser.add_argument('--save_pic_path', type=str, default="", help='save path for images')
     parser.add_argument('--save_val_path', type=str, default="", help='save path for values')
     parser.add_argument('--save_weight_path', type=str, default="", help='save path for weights')
@@ -355,6 +367,6 @@ if __name__ == '__main__':
     parser.add_argument('--pretrain', type=bool, default=False)
     args = parser.parse_args()
     
-    infer_weight_path = ""
+    infer_weight_path = ""  # ./weights/sax/Acc8_5/CRUNet_D_UP_latest.pth
     train_infer(args, False, infer_weight_path)
     

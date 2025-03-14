@@ -69,3 +69,59 @@ class CineDataset_MC_Philips(Dataset):
         if self.transform is not None:
             return self.transform(full_kspace), self.transform(und_kspace), mask, sense_map, name
         return full_kspace, und_kspace, mask, sense_map, name
+
+
+class CineDataset_MC_Philips_New(Dataset):
+    def __init__(self, files, mode, transform=None):
+        super().__init__()
+        self.files = files
+        self.transform = transform
+    
+    def __len__(self):
+        return len(self.files)
+    
+    def ifft2c(self, kspace):
+        axes = (-2, -1)
+        return fftshift(fft2(ifftshift(kspace, axes=axes), axes=axes, norm='ortho'), axes=axes)
+
+    def fft2c(self, img):
+        axes = (-2, -1)
+        return fftshift(ifft2(ifftshift(img, axes=axes), axes=axes, norm='ortho'), axes=axes)
+    
+    def norm(self, kspace):
+        img = self.ifft2c(kspace[:,0])
+        img = img/np.max(np.abs(img))
+        kspace = self.fft2c(img)
+        return kspace
+         
+    def __getitem__(self, idx):
+        file_path = self.files[idx]
+        name = file_path.split('.')[0]
+        
+        with h5py.File(file_path, 'r') as h5file:
+            print("Keys: %s" % h5file.keys())
+            print("Keys: %s" % h5file['AllData'].keys())
+        
+            bookkeeping = h5file['AllData']['bookkeeping'][:]
+            csm = h5file['AllData']['csm_r'][:] + 1j*h5file['AllData']['csm_r'][:]
+            kspace = h5file['AllData']['indata_raw_r'][:] + 1j*h5file['AllData']['indata_raw_i'][:]
+            temp = h5file['AllData']['indata_raw_r']
+            inv_sqrt_reg = np.sqrt(-1 * h5file['AllData']['mininvreg'][:] )
+        
+        
+            nrCardPhases = int(bookkeeping[:,0].max()+1)
+            nrLocations = int(bookkeeping[:,1].max()+1)
+            
+            kspace_ordered = np.zeros_like(kspace, shape = (nrCardPhases, nrLocations, kspace.shape[1], kspace.shape[2], kspace.shape[3]))
+            csm_ordered = np.zeros_like(kspace, shape = (nrCardPhases, nrLocations, csm.shape[1], csm.shape[2],csm.shape[3]))
+            inv_sqrt_reg_ordered = np.zeros_like(inv_sqrt_reg, shape = (nrCardPhases, nrLocations, inv_sqrt_reg.shape[1], inv_sqrt_reg.shape[2]))
+            for ind in range(bookkeeping.shape[0]):
+                kspace_ordered[int(bookkeeping[ind,0]),int(bookkeeping[ind,1]),...] = kspace[ind,...]
+                csm_ordered[int(bookkeeping[ind,0]),int(bookkeeping[ind,1]),...] = csm[ind,...]
+                inv_sqrt_reg_ordered[int(bookkeeping[ind,0]),int(bookkeeping[ind,1]),...] = inv_sqrt_reg[ind,...]   
+        
+        full_kspace = self.norm(full_kspace)
+        und_kspace = self.norm(und_kspace)
+        mask = mask[:,0]
+        sense_map = sense_map[:,0]
+        return full_kspace, und_kspace, mask, sense_map, name
