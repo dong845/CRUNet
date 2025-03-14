@@ -120,8 +120,7 @@ class CineDataset_MC_Philips_New(Dataset):
                 csm_ordered[int(bookkeeping[ind,0]),int(bookkeeping[ind,1]),...] = csm[ind,...]
                 inv_sqrt_reg_ordered[int(bookkeeping[ind,0]),int(bookkeeping[ind,1]),...] = inv_sqrt_reg[ind,...]   
         
-        full_kspace = self.norm(full_kspace)
-        und_kspace = self.norm(und_kspace)
-        mask = mask[:,0]
-        sense_map = sense_map[:,0]
-        return full_kspace, und_kspace, mask, sense_map, name
+        und_kspace = self.norm(kspace_ordered)[:,0]
+        mask = (np.abs(und_kspace) > 0).astype(np.uint8)[:,0]
+        sense_map = csm_ordered[:,0]
+        return und_kspace, mask, sense_map, name

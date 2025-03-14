@@ -113,7 +113,7 @@ def check_path(folder_path, model_name, mode, axis, tv, fname):
         return tv_dir
 
 
-def val_test(model, data_loader, mode="val"):
+def val_test(model, data_loader, mode="val", philips=True):
     model.eval()
     test_loss = 0
     nmses = []
@@ -126,50 +126,67 @@ def val_test(model, data_loader, mode="val"):
     img_recs = []
     img_gnds = []
     criterion = torch.nn.MSELoss().cuda()
-    for i, (full_kspace, und_kspace, mask, sense_map, name) in enumerate(data_loader):
-        sense_map = torch.view_as_real(sense_map).float().cuda()
-        full_image = torch.view_as_complex(sens_reduce(torch.view_as_real(full_kspace).cuda(), sense_map).squeeze(2)).cuda()
-        und_image = torch.view_as_complex(sens_reduce(torch.view_as_real(und_kspace).cuda(), sense_map).squeeze(2)).cuda()
-        with torch.no_grad():
-            rec_image = model(und_kspace.cuda(), mask.float().cuda(), sense_map)
+    if not philips:
+        for i, (full_kspace, und_kspace, mask, sense_map, name) in enumerate(data_loader):
+            sense_map = torch.view_as_real(sense_map).float().cuda()
+            full_image = torch.view_as_complex(sens_reduce(torch.view_as_real(full_kspace).cuda(), sense_map).squeeze(2)).cuda()
+            und_image = torch.view_as_complex(sens_reduce(torch.view_as_real(und_kspace).cuda(), sense_map).squeeze(2)).cuda()
+            with torch.no_grad():
+                rec_image = model(und_kspace.cuda(), mask.float().cuda(), sense_map)
 
-        gnd_image = torch.view_as_real(full_image)
-        t_loss = criterion(rec_image, gnd_image)
-        test_loss+=t_loss.item()
-        names.append(name[0])
-        
-        rec_img = torch.view_as_complex(rec_image).squeeze(0).cpu().numpy()
-        gnd_img = torch.view_as_complex(gnd_image).squeeze(0).cpu().numpy()
-        und_img = und_image.squeeze(0).cpu().numpy()
-        img_unds.append(und_img)
-        img_recs.append(rec_img)
-        img_gnds.append(gnd_img)
+            gnd_image = torch.view_as_real(full_image)
+            t_loss = criterion(rec_image, gnd_image)
+            test_loss+=t_loss.item()
+            names.append(name[0])
+            
+            rec_img = torch.view_as_complex(rec_image).squeeze(0).cpu().numpy()
+            gnd_img = torch.view_as_complex(gnd_image).squeeze(0).cpu().numpy()
+            und_img = und_image.squeeze(0).cpu().numpy()
+            img_unds.append(und_img)
+            img_recs.append(rec_img)
+            img_gnds.append(gnd_img)
+            if mode=="val":
+                [psnr_array, ssim_array, nmse_array] = calmetric(np.abs(rec_img).transpose(1,2,0), np.abs(gnd_img).transpose(1,2,0))
+                nmses.append(np.mean(nmse_array))
+                psnrs.append(np.mean(psnr_array))
+                ssims.append(np.mean(ssim_array))
+            else:
+                [psnr_array, ssim_array, nmse_array, dists_array, haar_array] = calmetric_new(np.abs(rec_img).transpose(1,2,0), np.abs(gnd_img).transpose(1,2,0))
+                psnrs.append(np.mean(psnr_array))
+                ssims.append(np.mean(ssim_array))
+                nmses.append(np.mean(nmse_array))
+                distses.append(np.mean(dists_array))
+                haars.append(np.mean(haar_array))
         if mode=="val":
-            [psnr_array, ssim_array, nmse_array] = calmetric(np.abs(rec_img).transpose(1,2,0), np.abs(gnd_img).transpose(1,2,0))
-            nmses.append(np.mean(nmse_array))
-            psnrs.append(np.mean(psnr_array))
-            ssims.append(np.mean(ssim_array))
+            return float(test_loss/(i+1)), nmses, psnrs, ssims, names, img_unds, img_recs, img_gnds
         else:
-            [psnr_array, ssim_array, nmse_array, dists_array, haar_array] = calmetric_new(np.abs(rec_img).transpose(1,2,0), np.abs(gnd_img).transpose(1,2,0))
-            psnrs.append(np.mean(psnr_array))
-            ssims.append(np.mean(ssim_array))
-            nmses.append(np.mean(nmse_array))
-            distses.append(np.mean(dists_array))
-            haars.append(np.mean(haar_array))
-    if mode=="val":
-        return float(test_loss/(i+1)), nmses, psnrs, ssims, names, img_unds, img_recs, img_gnds
+            return float(test_loss/(i+1)), nmses, psnrs, ssims, distses, haars, names, img_unds, img_recs, img_gnds
     else:
-        return float(test_loss/(i+1)), nmses, psnrs, ssims, distses, haars, names, img_unds, img_recs, img_gnds
+        for i, (und_kspace, mask, sense_map, name) in enumerate(data_loader):
+            sense_map = torch.view_as_real(sense_map).float().cuda()
+            und_image = torch.view_as_complex(sens_reduce(torch.view_as_real(und_kspace).cuda(), sense_map).squeeze(2)).cuda()
+            with torch.no_grad():
+                rec_image = model(und_kspace.cuda(), mask.float().cuda(), sense_map)
+            names.append(name[0])
+            rec_img = torch.view_as_complex(rec_image).squeeze(0).cpu().numpy()
+            und_img = und_image.squeeze(0).cpu().numpy()
+            img_unds.append(und_img)
+            img_recs.append(rec_img)
+        return names, img_unds, img_recs
 
-def process_val_test(args, model, data_loader, f_name, epoch, best_psnr, best_ssim, mode="val"):
+def process_val_test(args, model, data_loader, f_name, epoch, best_psnr, best_ssim, mode="val", philips=True):
     if args.save_pic_path=="":
         os.makedirs("./pic_save", exist_ok=True)
+        args.save_pic_path = "./pic_save"
     if args.save_val_path=="":
         os.makedirs("./val_save", exist_ok=True)
+        args.save_val_path = "./val_save"
     if args.save_weight_path=="":
         os.makedirs("./weight_save", exist_ok=True)
+        args.save_weight_path = "./weight_save"
+        
     if mode=="val":
-        test_loss, nmses, psnrs, ssims, names, img_unds, img_recs, img_gnds = val_test(model, data_loader)
+        test_loss, nmses, psnrs, ssims, names, img_unds, img_recs, img_gnds = val_test(model, data_loader, philips=philips)
         c_psnr = np.mean(psnrs)
         c_ssim = np.mean(ssims)
         c_nmse = np.mean(nmses)
@@ -207,27 +224,34 @@ def process_val_test(args, model, data_loader, f_name, epoch, best_psnr, best_ss
                     visualize(img_gnds[i], os.path.join(gnd_path, f"{names[i]}.png"))
                 visualize(img_recs[i], os.path.join(rec_path, f"{names[i]}.png"))
     elif mode=="test":
-        test_loss, nmses, psnrs, ssims, distses, haars, names, img_unds, img_recs, img_gnds = val_test(model, data_loader, mode)
-        val_path = check_path(args.save_val_path, args.model_name, args.mode, args.axis, mode, f_name)
-        for i in range(len(names)):
-            with h5py.File(os.path.join(val_path, f"{names[i]}.h5"), 'w') as f:
-                f["und"] = img_unds[i]
-                f["rec"] = img_recs[i]
-                f["gnd"] = img_gnds[i]
-                f["mean_nmse"] = np.mean(nmses)
-                f["mean_psnr"] = np.mean(psnrs)
-                f["mean_ssim"] = np.mean(ssims)
-                f["mean_dists"] = np.mean(distses)
-                f["mean_haarpsi"] = np.mean(haars)
-                f["std_nmse"] = np.std(nmses)
-                f["std_psnr"] = np.std(psnrs)
-                f["std_ssim"] = np.std(ssims)
-                f["std_dists"] = np.std(distses)
-                f["std_haarpsi"] = np.std(haars)
-        print("test psnr:", np.mean(psnrs))
-        print("test ssim:", np.mean(ssims))
-        print("test dists:", np.mean(distses))
-        print("test haars:", np.mean(haars))
+        if not philips:
+            test_loss, nmses, psnrs, ssims, distses, haars, names, img_unds, img_recs, img_gnds = val_test(model, data_loader, mode, philips=philips)
+            val_path = check_path(args.save_val_path, args.model_name, args.mode, args.axis, mode, f_name)
+            for i in range(len(names)):
+                with h5py.File(os.path.join(val_path, f"{names[i]}.h5"), 'w') as f:
+                    f["und"] = img_unds[i]
+                    f["rec"] = img_recs[i]
+                    f["gnd"] = img_gnds[i]
+                    f["mean_nmse"] = np.mean(nmses)
+                    f["mean_psnr"] = np.mean(psnrs)
+                    f["mean_ssim"] = np.mean(ssims)
+                    f["mean_dists"] = np.mean(distses)
+                    f["mean_haarpsi"] = np.mean(haars)
+                    f["std_nmse"] = np.std(nmses)
+                    f["std_psnr"] = np.std(psnrs)
+                    f["std_ssim"] = np.std(ssims)
+                    f["std_dists"] = np.std(distses)
+                    f["std_haarpsi"] = np.std(haars)
+            print("test psnr:", np.mean(psnrs))
+            print("test ssim:", np.mean(ssims))
+            print("test dists:", np.mean(distses))
+            print("test haars:", np.mean(haars))
+        else:
+            names, img_unds, img_recs = val_test(model, data_loader, mode, philips=philips)
+            for i in range(len(names)):
+                with h5py.File(os.path.join(val_path, f"{names[i]}.h5"), 'w') as f:
+                    f["und"] = img_unds[i]
+                    f["rec"] = img_recs[i]
     return best_psnr, best_ssim
 
 
@@ -350,7 +374,7 @@ if __name__ == '__main__':
     
     parser.add_argument('--train_path', type=str, default="", help='save path for training data') # needed for training
     parser.add_argument('--val_path', type=str, default="", help='save path for validation data') # needed for validation
-    parser.add_argument('--test_path', type=str, default="", help='save path for testing data')  # needed for testing: hdf5 file path
+    parser.add_argument('--test_path', type=str, default="", help='save path for testing data')  # needed for testing: hdf5 file path (e.g "./cine_Aov_cs.hdf5")
     parser.add_argument('--save_pic_path', type=str, default="", help='save path for images')
     parser.add_argument('--save_val_path', type=str, default="", help='save path for values')
     parser.add_argument('--save_weight_path', type=str, default="", help='save path for weights')
