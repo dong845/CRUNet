@@ -72,7 +72,7 @@ class CineDataset_MC_Philips(Dataset):
 
 
 class CineDataset_MC_Philips_New(Dataset):
-    def __init__(self, files, mode, transform=None):
+    def __init__(self, files, transform=None):
         super().__init__()
         self.files = files
         self.transform = transform
