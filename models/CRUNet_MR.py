@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
-import utils
+import models.utils as utils
 import random
 
 def setup_seed(seed):
@@ -327,6 +327,7 @@ class CRUNet_D_Block(nn.Module):
     
     def data_consistency(self, img, k0, mask, sens_maps, noise_lvl=None):
         v = noise_lvl
+        mask = mask.unsqueeze(2)
         k = torch.view_as_complex(self.sens_expand(img, sens_maps))
         if v is not None:  # noisy case
             out = (1 - mask) * k + mask * (k + v * k0) / (1 + v)
@@ -485,6 +486,7 @@ class CRUNet_D_Mon_Block(nn.Module):
     
     def data_consistency(self, img, k0, mask, sens_maps, noise_lvl=None):
         v = noise_lvl
+        mask = mask.unsqueeze(2)
         k = torch.view_as_complex(self.sens_expand(img, sens_maps))
         if v is not None:  # noisy case
             out = (1 - mask) * k + mask * (k + v * k0) / (1 + v)

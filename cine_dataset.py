@@ -89,7 +89,7 @@ class CineDataset_MC_Philips_New(Dataset):
         return fftshift(ifft2(ifftshift(img, axes=axes), axes=axes, norm='ortho'), axes=axes)
     
     def norm(self, kspace):
-        img = self.ifft2c(kspace[:,0])
+        img = self.ifft2c(kspace)
         img = img/np.max(np.abs(img))
         kspace = self.fft2c(img)
         return kspace
@@ -120,7 +120,7 @@ class CineDataset_MC_Philips_New(Dataset):
                 csm_ordered[int(bookkeeping[ind,0]),int(bookkeeping[ind,1]),...] = csm[ind,...]
                 inv_sqrt_reg_ordered[int(bookkeeping[ind,0]),int(bookkeeping[ind,1]),...] = inv_sqrt_reg[ind,...]   
         
-        und_kspace = self.norm(kspace_ordered)[:,0]  # delete the slice dimension
+        und_kspace = self.norm(kspace_ordered)[:, 0]  # delete the slice dimension
         mask = (np.abs(und_kspace) > 0).astype(np.uint8)[:,0]
         sense_map = csm_ordered[:,0]
         return und_kspace, mask, sense_map, name

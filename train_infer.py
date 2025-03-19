@@ -14,7 +14,7 @@ import os
 import random 
 import numpy as np
 import argparse
-import wandb
+# import wandb
 from losses import SSIMLoss
 from tqdm import tqdm
 
@@ -248,6 +248,7 @@ def process_val_test(args, model, data_loader, f_name, epoch, best_psnr, best_ss
             print("test haars:", np.mean(haars))
         else:
             names, img_unds, img_recs = val_test(model, data_loader, mode, philips=philips)
+            val_path = check_path(args.save_val_path, args.model_name, args.mode, args.axis, mode, f_name)
             for i in range(len(names)):
                 with h5py.File(os.path.join(val_path, f"{names[i]}.h5"), 'w') as f:
                     f["und"] = img_unds[i]
