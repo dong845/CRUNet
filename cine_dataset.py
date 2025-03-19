@@ -96,7 +96,7 @@ class CineDataset_MC_Philips_New(Dataset):
          
     def __getitem__(self, idx):
         file_path = self.files[idx]
-        name = file_path.split('.')[0]
+        name = file_path.split('/')[-1].split('.')[0]
         
         with h5py.File(file_path, 'r') as h5file:
             print("Keys: %s" % h5file.keys())
