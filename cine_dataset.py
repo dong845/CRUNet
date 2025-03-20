@@ -121,8 +121,8 @@ class CineDataset_MC_Philips_New(Dataset):
                 csm_ordered[int(bookkeeping[ind,0]),int(bookkeeping[ind,1]),...] = csm[ind,...]
                 inv_sqrt_reg_ordered[int(bookkeeping[ind,0]),int(bookkeeping[ind,1]),...] = inv_sqrt_reg[ind,...]   
         
-        kspace_ordered = torch.fft.fftshift(torch.tensor(kspace_ordered), dim=(-2,-1))
-        und_kspace = self.norm(kspace_ordered.numpy())[:,0]  # delete the slice dimension
-        mask = (np.abs(und_kspace) > 0).astype(np.uint8)
+        kspace_ordered_shift = torch.fft.fftshift(torch.tensor(kspace_ordered), dim=(-2,-1))
+        mask = (np.abs(kspace_ordered_shift.numpy()) > 0).astype(np.uint8)[:, 0]
+        und_kspace = self.norm(kspace_ordered)[:,0]  # delete the slice dimension
         sense_map = csm_ordered[:,0]
         return und_kspace, mask, sense_map, name
