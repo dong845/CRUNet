@@ -3,6 +3,7 @@ from torch.utils.data import Dataset
 import os
 import h5py
 from numpy.fft import fft, fft2, ifftshift, fftshift, ifft2
+import torch
 
 class CineDataset_MC(Dataset):
     def __init__(self, files, folder_path, mode, transform=None):
@@ -120,7 +121,8 @@ class CineDataset_MC_Philips_New(Dataset):
                 csm_ordered[int(bookkeeping[ind,0]),int(bookkeeping[ind,1]),...] = csm[ind,...]
                 inv_sqrt_reg_ordered[int(bookkeeping[ind,0]),int(bookkeeping[ind,1]),...] = inv_sqrt_reg[ind,...]   
         
-        und_kspace = self.norm(kspace_ordered)[:, 0]  # delete the slice dimension
-        mask = (np.abs(und_kspace) > 0).astype(np.uint8)[:,0]
+        kspace_ordered = torch.fft.fftshift(torch.tensor(kspace_ordered), dim=(-2,-1))
+        und_kspace = self.norm(kspace_ordered.numpy())[:,0]  # delete the slice dimension
+        mask = (np.abs(und_kspace) > 0).astype(np.uint8)
         sense_map = csm_ordered[:,0]
         return und_kspace, mask, sense_map, name
