@@ -73,15 +73,16 @@ def fft2c(data: torch.Tensor, norm: str = "ortho") -> torch.Tensor:
     if not data.shape[-1] == 2:
         raise ValueError("Tensor does not have separate complex dim.")
 
-    data = ifftshift(data, dim=[-3, -2])
+    # data = ifftshift(data, dim=[-3, -2])
     data = torch.view_as_real(
         torch.fft.fftn(
             torch.view_as_complex(data), dim=(-2, -1), norm=norm
         )
     )
-    data = fftshift(data, dim=[-3, -2])
+    # data = fftshift(data, dim=[-3, -2])
 
     return data
+
 
 
 def ifft2c(data: torch.Tensor, norm: str = "ortho") -> torch.Tensor:
@@ -100,13 +101,13 @@ def ifft2c(data: torch.Tensor, norm: str = "ortho") -> torch.Tensor:
     if not data.shape[-1] == 2:
         raise ValueError("Tensor does not have separate complex dim.")
 
-    data = ifftshift(data, dim=[-3, -2])
+    # data = ifftshift(data, dim=[-3, -2])
     data = torch.view_as_real(
         torch.fft.ifftn(
             torch.view_as_complex(data), dim=(-2, -1), norm=norm
         )
     )
-    data = fftshift(data, dim=[-3, -2])
+    # data = fftshift(data, dim=[-3, -2])
 
     return data
 
