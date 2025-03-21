@@ -83,11 +83,13 @@ class CineDataset_MC_Philips_New(Dataset):
     
     def ifft2c(self, kspace):
         axes = (-2, -1)
-        return fftshift(fft2(ifftshift(kspace, axes=axes), axes=axes, norm='ortho'), axes=axes)
+        # return fftshift(fft2(ifftshift(kspace, axes=axes), axes=axes, norm='ortho'), axes=axes)
+        return ifft2(kspace, axes=axes, norm='ortho')
 
     def fft2c(self, img):
         axes = (-2, -1)
-        return fftshift(ifft2(ifftshift(img, axes=axes), axes=axes, norm='ortho'), axes=axes)
+        # return fftshift(ifft2(ifftshift(img, axes=axes), axes=axes, norm='ortho'), axes=axes)
+        return fft2(img, axes=axes, norm='ortho')
     
     def norm(self, kspace):
         img = self.ifft2c(kspace)
@@ -123,6 +125,6 @@ class CineDataset_MC_Philips_New(Dataset):
         
         kspace_ordered = torch.fft.fftshift(torch.tensor(kspace_ordered), dim=(-2,-1))
         mask = (np.abs(kspace_ordered.numpy()) > 0).astype(np.uint8)[:, 0]
-        und_kspace = self.norm(kspace_ordered)[:,0]  # delete the slice dimension
+        und_kspace = self.norm(kspace_ordered.numpy())[:,0]  # delete the slice dimension
         sense_map = csm_ordered[:,0]
         return und_kspace, mask, sense_map, name
