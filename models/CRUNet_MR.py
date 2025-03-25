@@ -5,6 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 import models.utils as utils
+import math
 import random
 
 def setup_seed(seed):
@@ -325,6 +326,46 @@ class CRUNet_D_Block(nn.Module):
     ) -> torch.Tensor:
         return x * std + mean
     
+    def pad(
+        self, x: torch.Tensor
+    ) -> Tuple[torch.Tensor, Tuple[List[int], List[int], int, int]]:
+        _, _, h, w = x.shape
+        w_mult = ((w - 1) | 7) + 1
+        h_mult = ((h - 1) | 7) + 1
+        w_pad = [math.floor((w_mult - w) / 2), math.ceil((w_mult - w) / 2)]
+        h_pad = [math.floor((h_mult - h) / 2), math.ceil((h_mult - h) / 2)]
+        x = F.pad(x, w_pad + h_pad)
+
+        return x, (h_pad, w_pad, h_mult, w_mult)
+
+    def unpad(
+        self,
+        x: torch.Tensor,
+        h_pad: List[int],
+        w_pad: List[int],
+        h_mult: int,
+        w_mult: int,
+    ) -> torch.Tensor:
+        return x[..., h_pad[0]: h_mult - h_pad[1], w_pad[0]: w_mult - w_pad[1]]
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        if not x.shape[-1] == 2:
+            raise ValueError("Last dimension must be 2 for complex.")
+
+        # get shapes for unet and normalize
+        x = self.complex_to_chan_dim(x)
+        x, mean, std = self.norm(x)
+        x, pad_sizes = self.pad(x)
+
+        x = self.unet(x)
+
+        # get shapes back and unnormalize
+        x = self.unpad(x, *pad_sizes)
+        x = self.unnorm(x, mean, std)
+        x = self.chan_complex_to_last_dim(x)
+
+        return x
+
     def data_consistency(self, img, k0, mask, sens_maps, noise_lvl=None):
         v = noise_lvl
         k = torch.view_as_complex(self.sens_expand(img, sens_maps))
@@ -361,6 +402,8 @@ class CRUNet_D_Block(nn.Module):
             x = x.permute(4, 0, 1, 2, 3).contiguous()
             x = x.float()
         x = x.reshape(-1, 2, h, w)
+        x, pad_sizes = self.pad(x)
+        _, _, h, w = x.shape
 
         x0 = self.conv0(x)
         
@@ -394,6 +437,8 @@ class CRUNet_D_Block(nn.Module):
         x01 = self.conv(net['x4'])
         # x = x + x01 # tb 2 h w
         x = x + self.cal_std_map(x01, x)
+        x = self.unpad(x, *pad_sizes)
+        _, _, h, w = x.shape
 
         if self.norms:
             x = x.view(-1, b, ch, h, w) # t b 2 h w
@@ -590,17 +635,32 @@ class CRUNet_D_NWS(nn.Module):
             dim=2, keepdim=True,
         )
     
+        
+    def pad(
+        self, x: torch.Tensor
+    ) -> Tuple[torch.Tensor, Tuple[List[int], List[int], int, int]]:
+        _, _, h, w = x.shape
+        w_mult = ((w - 1) | 7) + 1
+        h_mult = ((h - 1) | 7) + 1
+        w_pad = [math.floor((w_mult - w) / 2), math.ceil((w_mult - w) / 2)]
+        h_pad = [math.floor((h_mult - h) / 2), math.ceil((h_mult - h) / 2)]
+        x = F.pad(x, w_pad + h_pad)
+
+        return x, (h_pad, w_pad, h_mult, w_mult)
     
     def forward(self, ref_kspace, mask, sens_maps):
         x_ref = self.sens_reduce(torch.view_as_real(ref_kspace), sens_maps).squeeze(2) # b t h w 2
         x = x_ref.clone().permute(0,4,2,3,1).contiguous() # b 2 h w t
         b, ch, h, w, t = x.size()
-        size_h = [t*b, self.chans1, h//2, w//2]
-        
+
         net = {}
         rcnn_layers = 6
         net['x0'] = torch.Tensor(torch.zeros([t*b, self.chans, h, w])).requires_grad_(True).to(x.device)
+        net['x0'], _ = self.pad(net['x0'])
         net['x4'] = torch.Tensor(torch.zeros([t*b, self.chans, h, w])).requires_grad_(True).to(x.device)
+        net['x4'], _ = self.pad(net['x4'])
+        tb, _, hh, ww = net['x0'].shape
+        size_h = [tb, self.chans1, hh//2, ww//2]
         for j in range(1, rcnn_layers-2):
             net['x%d'%j] = torch.Tensor(torch.zeros(size_h)).requires_grad_(True).to(x.device)
         
