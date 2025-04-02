@@ -348,24 +348,6 @@ class CRUNet_D_Block(nn.Module):
     ) -> torch.Tensor:
         return x[..., h_pad[0]: h_mult - h_pad[1], w_pad[0]: w_mult - w_pad[1]]
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        if not x.shape[-1] == 2:
-            raise ValueError("Last dimension must be 2 for complex.")
-
-        # get shapes for unet and normalize
-        x = self.complex_to_chan_dim(x)
-        x, mean, std = self.norm(x)
-        x, pad_sizes = self.pad(x)
-
-        x = self.unet(x)
-
-        # get shapes back and unnormalize
-        x = self.unpad(x, *pad_sizes)
-        x = self.unnorm(x, mean, std)
-        x = self.chan_complex_to_last_dim(x)
-
-        return x
-
     def data_consistency(self, img, k0, mask, sens_maps, noise_lvl=None):
         v = noise_lvl
         k = torch.view_as_complex(self.sens_expand(img, sens_maps))
