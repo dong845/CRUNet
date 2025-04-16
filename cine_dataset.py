@@ -128,10 +128,7 @@ class CineDataset_MC_Philips_New(Dataset):
         mask = (np.abs(kspace_ordered.numpy()) > 0).astype(np.uint8)[:,0]
         csm = csm_ordered[:,0]
         csm = torch.tensor(csm)
+        csm = torch.flip(csm, dims=[-2,-1])
         rss = torch.sqrt(torch.sum(torch.abs(csm) ** 2, dim=1, keepdim=True) + 1e-8)
         csm = csm / rss
-       
-        threshold = np.percentile(inv_sqrt_reg_ordered, 15)
-        inv_sqrt_reg_ordered_mask = (inv_sqrt_reg_ordered<threshold).astype(np.int8)
-        csm = csm*inv_sqrt_reg_ordered_mask
         return und_kspace, mask, csm, name
