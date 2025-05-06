@@ -233,9 +233,9 @@ class ConvTranspose2_1d(nn.Module):
                         padding=(0, 0, 0), dilation=(1, 1, 1), bias=True, tcp=True):
         super().__init__()
         self.tcp = tcp
-        # self.convTranspose2d = nn.ConvTranspose2d(in_chans, chans, kernel_size[1:], stride[1:], padding[1:], dilation=dilation[1:], bias=bias)
-        self.convTranspose2d = nn.Sequential(nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False),
-                nn.Conv2d(in_chans, chans, 3, stride=1, padding=1, bias=False))
+        self.convTranspose2d = nn.ConvTranspose2d(in_chans, chans, kernel_size[1:], stride[1:], padding[1:], dilation=dilation[1:], bias=bias)
+        # self.convTranspose2d = nn.Sequential(nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False),
+        #         nn.Conv2d(in_chans, chans, 3, stride=1, padding=1, bias=False))
         if self.tcp:
             self.convTranspose1d = nn.Conv1d(chans, chans, kernel_size[0], stride[0], padding[0], dilation=dilation[0], bias=bias)
         else:
