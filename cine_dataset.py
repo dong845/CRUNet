@@ -126,7 +126,7 @@ class CineDataset_MC_Philips_New(Dataset):
         # kspace_ordered = torch.fft.ifftshift(torch.tensor(kspace_ordered), dim=(-2,-1))
         
         und_kspace = self.norm(kspace_ordered)[:,0]  # delete the slice dimension
-        mask = (np.abs(kspace_ordered.numpy()) > 0).astype(np.uint8)[:,0]
+        mask = (np.abs(kspace_ordered) > 0).astype(np.uint8)[:,0]
         csm = csm_ordered[:,0]
         csm = torch.tensor(csm)
         
