@@ -53,6 +53,7 @@ def visualize(img, path):
     plt.savefig(path)
     plt.close()
     
+    
 def sens_expand(x: torch.Tensor, sens_maps: torch.Tensor) -> torch.Tensor:
     """
     Forward operator: from coil-combined image-space to k-space.
@@ -251,8 +252,8 @@ def process_val_test(args, model, data_loader, f_name, epoch, best_psnr, best_ss
             val_path = check_path(args.save_val_path, args.model_name, args.mode, args.axis, mode, f_name)
             for i in range(len(names)):
                 with h5py.File(os.path.join(val_path, f"{names[i]}.h5"), 'w') as f:
-                    f["und"] = img_unds[i]
-                    f["rec"] = img_recs[i]
+                    f["und"] = clip_images(img_unds[i])
+                    f["rec"] = clip_images(img_recs[i])
     return best_psnr, best_ssim
 
 

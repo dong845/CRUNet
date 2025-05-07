@@ -130,7 +130,7 @@ class CineDataset_MC_Philips_New(Dataset):
         csm = csm_ordered[:,0]
         csm = torch.tensor(csm)
         
-        threshold = np.percentile(inv_sqrt_reg_ordered, 20)
+        threshold = np.percentile(inv_sqrt_reg_ordered, 50)
         inv_sqrt_reg_ordered_mask = (inv_sqrt_reg_ordered<threshold).astype(np.int8)
         csm = csm*inv_sqrt_reg_ordered_mask
         
