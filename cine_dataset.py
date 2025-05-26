@@ -135,6 +135,6 @@ class CineDataset_MC_Philips_New(Dataset):
         csm = csm*inv_sqrt_reg_ordered_mask
         
         csm = torch.flip(csm, dims=[-2,-1])
-        rss = torch.sqrt(torch.sum(torch.abs(csm) ** 2, dim=1, keepdim=True) + 1e-8)
-        csm = csm / rss
-        return und_kspace, mask, csm, torch.tensor(rss).squeeze(1), name
+        # rss = torch.sqrt(torch.sum(torch.abs(csm) ** 2, dim=1, keepdim=True) + 1e-8)
+        # csm = csm / rss
+        return und_kspace, mask, csm, name

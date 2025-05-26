@@ -163,7 +163,7 @@ def val_test(model, data_loader, mode="val", philips=True):
         else:
             return float(test_loss/(i+1)), nmses, psnrs, ssims, distses, haars, names, img_unds, img_recs, img_gnds
     else:
-        for i, (und_kspace, mask, sense_map, rss, name) in enumerate(data_loader):
+        for i, (und_kspace, mask, sense_map, name) in enumerate(data_loader):
             sense_map = torch.view_as_real(sense_map).float().cuda()
             und_image = torch.view_as_complex(sens_reduce(torch.view_as_real(und_kspace).cuda(), sense_map).squeeze(2)).cuda()
             with torch.no_grad():
@@ -173,8 +173,8 @@ def val_test(model, data_loader, mode="val", philips=True):
             # und_img = und_image.squeeze(0).cpu().numpy()*rss.squeeze(0).numpy()
             rec_img = torch.view_as_complex(rec_image).squeeze(0).cpu().numpy()
             und_img = und_image.squeeze(0).cpu().numpy()
-            img_unds.append(und_img/np.max(np.abs(und_img)))
-            img_recs.append(rec_img/np.max(np.abs(rec_img)))
+            img_unds.append(und_img)
+            img_recs.append(rec_img)
         return names, img_unds, img_recs
 
 def process_val_test(args, model, data_loader, f_name, epoch, best_psnr, best_ssim, mode="val", philips=True):
