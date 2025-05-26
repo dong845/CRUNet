@@ -254,8 +254,6 @@ def process_val_test(args, model, data_loader, f_name, epoch, best_psnr, best_ss
                 with h5py.File(os.path.join(val_path, f"{names[i]}.h5"), 'w') as f:
                     f["und"] = img_unds[i]
                     f["rec"] = img_recs[i]
-                    # f["und"] = clip_images(img_unds[i])
-                    # f["rec"] = clip_images(img_recs[i])
     return best_psnr, best_ssim
 
 
