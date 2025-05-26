@@ -169,12 +169,10 @@ def val_test(model, data_loader, mode="val", philips=True):
             with torch.no_grad():
                 rec_image = model(und_kspace.cuda(), mask.float().cuda(), sense_map)
             names.append(name[0])
-            # rec_img = torch.view_as_complex(rec_image).squeeze(0).cpu().numpy()*rss.squeeze(0).numpy()
-            # und_img = und_image.squeeze(0).cpu().numpy()*rss.squeeze(0).numpy()
             rec_img = torch.view_as_complex(rec_image).squeeze(0).cpu().numpy()
             und_img = und_image.squeeze(0).cpu().numpy()
-            img_unds.append(und_img)
-            img_recs.append(rec_img)
+            img_unds.append(clip_images(und_img))
+            img_recs.append(clip_images(rec_img))
         return names, img_unds, img_recs
 
 def process_val_test(args, model, data_loader, f_name, epoch, best_psnr, best_ssim, mode="val", philips=True):
